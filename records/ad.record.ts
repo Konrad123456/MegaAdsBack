@@ -1,9 +1,13 @@
 import { ValidationError } from './../utils/errors';
 import { AdEntity } from "../types";
+import { pool } from '../utils/db';
+import { FieldPacket } from 'mysql2';
 
 interface NewAdEntity extends Omit<AdEntity, 'id'> {
     id?: string;
 }
+
+type AdRecordResults = [AdEntity[], FieldPacket[]];
 
 export class AdRecord implements AdEntity {
     public id: string;
@@ -43,5 +47,14 @@ export class AdRecord implements AdEntity {
         this.url = obj.url;
         this.lat = obj.lat;
         this.lon = obj.lon;
+    }
+
+    public static async getOne(id: string): Promise<AdRecord | null> {
+        const [result] = await pool.execute("SELECT * FROM `ads` WHERE `id` = ?;", [id]) as AdRecordResults;
+        if(result[0]) {
+            const newAds = new AdRecord(result[0]);
+            return newAds;
+        } 
+        return null;
     }
 }
