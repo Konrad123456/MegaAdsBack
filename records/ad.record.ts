@@ -1,10 +1,12 @@
+import { SimpleAdEntity } from './../types/ad/ad-entity';
 import { ValidationError } from './../utils/errors';
 import { AdEntity } from "../types";
 import { pool } from '../utils/db';
 import { FieldPacket } from 'mysql2';
+import { randomUUID } from 'crypto';
 
 interface NewAdEntity extends Omit<AdEntity, 'id'> {
-    id?: string;
+    id: string;
 }
 
 type AdRecordResults = [AdEntity[], FieldPacket[]];
@@ -40,7 +42,7 @@ export class AdRecord implements AdEntity {
             throw new ValidationError('Invalid coordinates');
         }
 
-        this.id = obj.id;
+        this.id = obj.id ?? randomUUID();
         this.name = obj.name;
         this.description = obj.description;
         this.price = obj.price;
@@ -49,12 +51,36 @@ export class AdRecord implements AdEntity {
         this.lon = obj.lon;
     }
 
-    public static async getOne(id: string): Promise<AdRecord | null> {
+    static async getOne(id: string): Promise<AdRecord | null> {
         const [result] = await pool.execute("SELECT * FROM `ads` WHERE `id` = ?;", [id]) as AdRecordResults;
         if(result[0]) {
             const newAds = new AdRecord(result[0]);
             return newAds;
         } 
         return null;
+    }
+
+    static async findAll(name: string): Promise<SimpleAdEntity[]>{
+        const [results] = await pool.execute("SELECT * FROM `ads` WHERE `name` LIKE ?;", [`%${name}%`]) as AdRecordResults;
+        
+        return results.map(result => {
+            const {id, lat, lon} = result;
+            return {
+                id,
+                lat,
+                lon
+            }
+        });
+    }
+
+    async insert(): Promise<void> {
+        try {
+            await pool.execute(
+                "INSERT INTO `ads`(`id`, `name`, `description`, `price`, `url`, `lat`, `lon`) VALUES (:id, :name, :description, :price, :url, :lat, :lon);", 
+                this
+            )
+        } catch (e) {
+            throw new ValidationError('This id is in our database!');
+        }
     }
 }
