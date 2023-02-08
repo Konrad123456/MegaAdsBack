@@ -1,3 +1,4 @@
+import { adRouter } from './router/ad.router';
 import express from 'express';
 import cors from 'cors';
 import 'express-async-errors';
@@ -15,6 +16,8 @@ app.use(rateLimit({
     windowMs: 5 * 60 * 1000,
     max: 100
 }));
+
+app.use('/ad', adRouter);
 
 //Routes
 app.get('/', (req, res)  => {
